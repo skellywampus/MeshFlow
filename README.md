@@ -8,6 +8,12 @@ MeshFlow is based on Meshtastic firmware. It keeps Meshtastic's device configura
 
 > **Experimental beta:** Intended for M9 users who are comfortable testing community firmware and reporting issues. It is not an official Meshtastic release. Keep a known-good firmware image available before installing.
 
+## MeshFlow on the ThinkNode M9
+
+![MeshFlow home screen on a ThinkNode M9](images/m9-home.jpg)
+
+*The MeshFlow home screen running on a ThinkNode M9.*
+
 ## How MeshFlow differs on the M9
 
 | Area | Meshtastic foundation | MeshFlow for ThinkNode M9 |
