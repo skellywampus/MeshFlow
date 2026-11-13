@@ -8,7 +8,7 @@ The [Meshtastic Web Flasher](https://flasher.meshtastic.org/) accepts a locally 
 
 Before starting, back up configuration and credentials you need to keep, and have a known-good M9 recovery image and instructions available. This update relies on a compatible Meshtastic bootloader and partition layout already being present. On my M9, the application partition starts at `0x10000` and is 4,063,232 bytes. Other layouts or active boot slots may differ; do not proceed if you cannot confirm compatibility.
 
-1. Download **`firmware.bin`** from the [MeshFlow beta release](https://github.com/skellywampus/MeshFlow/releases/tag/v0.1.0-beta). Do not rename it with a `.factory.bin` suffix.
+1. Download **`firmware.bin`** from the [MeshFlow beta release](https://github.com/skellywampus/MeshFlow/releases/tag/v0.1.1-beta). Do not rename it with a `.factory.bin` suffix.
 2. Connect the ThinkNode M9 to the computer using a USB data cable.
 3. Open the [Meshtastic Web Flasher](https://flasher.meshtastic.org/) in a browser that supports Web Serial, such as Chrome or Edge.
 4. Select **ThinkNode M9**, then use the upload icon under Firmware to select the downloaded `firmware.bin`.

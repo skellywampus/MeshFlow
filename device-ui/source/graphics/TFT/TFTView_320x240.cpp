@@ -9737,7 +9737,7 @@ void TFTView_320x240::addChat(uint32_t from, uint32_t to, uint8_t ch)
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.chats_button_label = obj;
             lv_obj_set_pos(obj, 6, 3);
-            lv_obj_set_size(obj, LV_PCT(78), LV_SIZE_CONTENT);
+            lv_obj_set_size(obj, LV_PCT(78), 19);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_DOT);
             lv_label_set_text(obj, buf);
             lv_obj_set_style_align(obj, LV_ALIGN_TOP_LEFT,
@@ -10405,6 +10405,10 @@ bool TFTView_320x240::chatTitleFromModel(uint32_t nodeNum, char *buf, size_t buf
         NodeListRowPresentation::formatShortDisplayName(renderedShort, sizeof(renderedShort), record->user.short_name, nodeNum);
     }
     snprintf(buf, bufSize, "%s: %s", renderedShort, record->user.long_name);
+    // Node-list distance is formatted on a second line. A chat card reserves
+    // that line for the last-message preview, so keep its title on one line.
+    for (char *p = buf; *p; ++p)
+        if (*p == '\n' || *p == '\r') *p = ' ';
     return true;
 }
 
