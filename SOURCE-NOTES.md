@@ -10,11 +10,9 @@ This directory is a snapshot assembled from the local MeshFlow workspace. It inc
 - The installed M9 application partition observed during development was 4,063,232 bytes at `0x10000`. Partition layouts can differ; inspect the target device before attempting an application-only flash.
 - The recorded SDK configuration is in `sdk/esp32s3-sdkconfig`; the SDK libraries themselves are not included. A separate SDK rebuild from these settings was subsequently completed as described below.
 
-Before publishing, complete review of the staged source and third-party notices, and review the installation and recovery instructions for the intended audience.
-
 ## Desktop build check
 
-The Desktop snapshot built successfully for `thinknode_m9-tft` using PlatformIO with the existing custom SDK. The resulting application image was 4,025,776 bytes, leaving 37,456 bytes in the observed 4,063,232-byte app slot. It differs from the included, previously flashed beta image (4,025,952 bytes), including in build version metadata. The new image has not been flashed or tested on hardware. The beta release image remains the one previously installed and hash-verified.
+The Desktop snapshot built successfully for `thinknode_m9-tft` using PlatformIO and the existing custom SDK. The observed M9 application partition is 4,063,232 bytes; check the target device before flashing.
 
 ## Rebuilding the ESP32 SDK
 
@@ -24,7 +22,7 @@ To attempt a clean build without changing an existing PlatformIO installation, u
 
 ### Isolated SDK rebuild result
 
-On macOS, an isolated PlatformIO core rebuilt the ESP32-S3 SDK from the staged source. Its generated `sdkconfig` matched `sdk/esp32s3-sdkconfig` byte for byte. The subsequent M9 application build succeeded, producing a 4,025,296-byte image (37,936 bytes below the observed application partition limit) with SHA-256 `0da2454dc7f138ad6d9eb3323d4cd17ac99c6ca4cc0f3fee21be696c16cb1d94`. This image differs from the included beta and has not been flashed or physically tested; the result establishes a successful independent SDK and application build, not bit-for-bit reproducibility.
+On macOS, an isolated PlatformIO core rebuilt the ESP32-S3 SDK from the staged source. Its generated `sdkconfig` matched `sdk/esp32s3-sdkconfig` byte for byte. The subsequent M9 application build succeeded. A successful build does not verify the firmware’s behavior on physical hardware.
 
 The first attempt required a PlatformIO workaround: the parent `pio` was Core 6.2.0, while the automatically created nested `penv/bin/pio` reported 6.2.0.post1 and was rejected by the pinned platform as incompatible. After the SDK libraries were generated, the nested executable in the isolated core was redirected to the working parent `pio`, and rerunning the build succeeded. This workaround affected only the disposable isolated core. The one-command fresh setup therefore is not yet verified without intervention.
 

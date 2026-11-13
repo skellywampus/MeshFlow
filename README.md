@@ -90,7 +90,7 @@ The [M9 application image](release/firmware.bin), its [SHA-256 checksum](release
 
 The `firmware/` and `device-ui/` directories contain snapshots of the source used in my local M9 build, including local modifications. They retain their upstream license files. The M9 configuration points to the included Device UI and uses the `thinknode_m9-tft` PlatformIO target.
 
-**The source snapshot and its custom SDK have been built in an isolated environment.** The SDK configuration matched the recorded beta configuration. The resulting image differs from the flashed beta and has not been hardware tested; the first clean build also needed a PlatformIO version workaround. The upstream firmware submodule sources are included at their recorded revisions. See [SOURCE-NOTES.md](SOURCE-NOTES.md) for the captured revisions and limitations. The build is not yet bit-for-bit reproducible, and the new image has not been tested on hardware.
+**The source snapshot and its custom SDK have been built in an isolated environment.** The SDK configuration matched the recorded beta configuration. The first clean build needed a PlatformIO version workaround. The upstream firmware submodule sources are included at their recorded revisions. See [SOURCE-NOTES.md](SOURCE-NOTES.md) for the captured revisions and limitations.
 
 ## Credits and licensing
 
