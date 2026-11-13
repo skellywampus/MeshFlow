@@ -1,0 +1,9 @@
+.DS_Store
+.pio/
+.venv/
+__pycache__/
+*.pyc
+build/
+
+# Bundled map tiles need separate redistribution review.
+/device-ui/maps/*.zip
