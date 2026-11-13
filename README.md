@@ -78,7 +78,7 @@ This is experimental firmware. Before installing, make sure you can restore a kn
 
 ## Beta firmware
 
-The [M9 application image](release/firmware.bin), its [SHA-256 checksum](release/SHA256SUMS), and [beta release notes](RELEASE-NOTES.md) are included for evaluation. It was built for the `thinknode_m9-tft` target and flashed on my M9. This is an application image, not a factory image. Installation depends on the device's actual partition layout; do not use a full-flash erase to install it. See [installation notes](INSTALLATION.md). I am still preparing a complete guide, so this package is intended for experienced testers.
+The [M9 application image](release/firmware.bin), its [SHA-256 checksum](release/SHA256SUMS), and [beta release notes](RELEASE-NOTES.md) are included for evaluation. It was built for the `thinknode_m9-tft` target and flashed on my M9. This is an application image, not a factory image. Installation depends on the device's actual partition layout; do not use a full-flash erase to install it. The intended installation method is the Meshtastic Web Flasher with a locally uploaded update image; see the [installation guide](INSTALLATION.md). I have not yet tested the complete browser workflow on an M9.
 
 ## Source and build status
 

@@ -1,21 +1,36 @@
 # Installing the M9 beta
 
-The image in `release/firmware.bin` is an ESP32-S3 application image for the Elecrow ThinkNode M9, not a complete factory image. The build used for the beta was written at `0x10000` on an M9 whose existing application partition started there and was 4,063,232 bytes. Check the target device's existing partition table and active boot arrangement before using that offset: other layouts may differ.
+MeshFlow is an experimental firmware update for the **Elecrow ThinkNode M9**. The release's `firmware.bin` is an application image; it is not a factory image or a recovery image for an erased device.
 
-Before installation, export any configuration and credentials you need to retain, and keep a known-good recovery image and its installation instructions available. The beta does not include a universal recovery image. An application-only write preserves data outside its write range; it does not replace a backup or guarantee compatibility with every existing installation.
+## Meshtastic Web Flasher
 
-Verify the downloaded image against `release/SHA256SUMS`. For example, on macOS or Linux, from the `release` directory:
+The [Meshtastic Web Flasher](https://flasher.meshtastic.org/) accepts a locally uploaded ESP32 update image. Its current source writes an uploaded update at `0x10000` without erasing the entire flash—the method used to install this image on my M9. **I have not yet tested the complete browser workflow on an M9**, so treat these steps as beta instructions. The flasher's appearance or behavior may change.
+
+Before starting, back up configuration and credentials you need to keep, and have a known-good M9 recovery image and instructions available. This update relies on a compatible Meshtastic bootloader and partition layout already being present. On my M9, the application partition starts at `0x10000` and is 4,063,232 bytes. Other layouts or active boot slots may differ; do not proceed if you cannot confirm compatibility.
+
+1. Download **`firmware.bin`** from the [MeshFlow beta release](https://github.com/skellywampus/MeshFlow/releases/tag/v0.1.0-beta). Do not rename it with a `.factory.bin` suffix.
+2. Connect the ThinkNode M9 to the computer using a USB data cable.
+3. Open the [Meshtastic Web Flasher](https://flasher.meshtastic.org/) in a browser that supports Web Serial, such as Chrome or Edge.
+4. Select **ThinkNode M9**, then use the upload icon under Firmware to select the downloaded `firmware.bin`.
+5. Use the normal **Update** option. Do **not** select **Full Erase and Install** or any erase-flash option. If the flasher only offers a full erase, stop.
+6. Select the M9's serial port when prompted and keep it connected until the flasher reports completion.
+
+A normal application-only update is intended to preserve data outside the written application region, but it does not replace a backup or guarantee compatibility with every M9 configuration. The included binary alone cannot restore an erased bootloader or partition table.
+
+## Verify the download
+
+The release also includes `SHA256SUMS`. On macOS or Linux, with both downloaded files in the same directory, run:
 
 ```sh
 shasum -a 256 -c SHA256SUMS
 ```
 
-On a device whose partition layout and active app slot have been verified to match the development M9, an experienced user can use esptool's `write-flash` command to write only this image at `0x10000`. For that verified layout, the command has this form, replacing `PORT` with the M9's serial port:
+## Alternative: esptool
+
+For an M9 whose partition layout and active app slot have been verified to match the development device, an experienced user can write the application at `0x10000` with esptool. From the directory containing `firmware.bin`, replace `PORT` with the M9's serial port:
 
 ```sh
 esptool --chip esp32s3 --port PORT --baud 115200 write-flash 0x10000 firmware.bin
 ```
 
-Run it from the `release` directory. Select the correct serial port explicitly. Do not use `erase-flash` or a factory image as part of this update. Keep the device connected until esptool reports that the write and its built-in verification have completed.
-
-These are beta notes for experienced testers. A complete installation guide covering other operating systems, partition layouts, backups, and recovery is still being prepared.
+Do not use `erase-flash` for this update. Keep the device connected until esptool reports that the write and its built-in verification have completed.
