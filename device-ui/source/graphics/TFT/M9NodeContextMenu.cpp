@@ -171,8 +171,17 @@ void TFTView_320x240::nodeContextEvent(lv_event_t *event)
     const auto code = lv_event_get_code(event);
     if (code == LV_EVENT_KEY) {
         const auto key = lv_event_get_key(event);
-        if ((key == LV_KEY_UP || key == LV_KEY_DOWN) && !self->nodeContextIsMenu)
-            lv_obj_scroll_by(lv_msgbox_get_content(self->nodeContextBox), 0, key == LV_KEY_UP ? 40 : -40, LV_ANIM_OFF);
+        if ((key == LV_KEY_UP || key == LV_KEY_DOWN) && !self->nodeContextIsMenu) {
+            auto *content = lv_msgbox_get_content(self->nodeContextBox);
+            if (self->powerStatisticsView) {
+                lv_obj_update_layout(content);
+                const int32_t available = key == LV_KEY_UP ? lv_obj_get_scroll_top(content) : lv_obj_get_scroll_bottom(content);
+                const int32_t step = available > 40 ? 40 : available > 0 ? available : 0;
+                if (step) lv_obj_scroll_by(content, 0, key == LV_KEY_UP ? step : -step, LV_ANIM_OFF);
+            } else {
+                lv_obj_scroll_by(content, 0, key == LV_KEY_UP ? 40 : -40, LV_ANIM_OFF);
+            }
+        }
         else if (key == LV_KEY_UP) lv_group_focus_prev(self->nodeContextGroup);
         else if (key == LV_KEY_DOWN) lv_group_focus_next(self->nodeContextGroup);
         else if (key == LV_KEY_ESC || key == LV_KEY_BACKSPACE) self->closeNodeContext(true);

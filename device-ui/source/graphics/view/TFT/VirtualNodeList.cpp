@@ -69,7 +69,7 @@ void formatLastHeard(uint32_t lastHeard, uint32_t currentTime, char *buffer, siz
 
 void formatShortName(const NodeRecord &record, const NodeListRenderContext &context, char *buffer, size_t bufferSize)
 {
-    // Remote rows carry a distance line only when both positions are known.
+    // Show distance alongside the short name when both positions are known.
     if (!context.hasOwnPosition || record.id == context.ownNode || !record.position.hasCoordinates()) {
         NodeListRowPresentation::formatShortDisplayName(buffer, bufferSize, record.user.short_name, record.id);
         return;
@@ -77,6 +77,10 @@ void formatShortName(const NodeRecord &record, const NodeListRenderContext &cont
     NodeListRowPresentation::formatShortNameWithDistance(
         buffer, bufferSize, record.user.short_name, record.id, context.hasOwnPosition, context.ownLatitude, context.ownLongitude,
         record.position.latitude, record.position.longitude, context.metricUnits);
+    // The shared node formatter uses a newline for distance. Compact M9 rows
+    // reserve their second line for the long name, so keep this on one line.
+    for (char *p = buffer; *p; ++p)
+        if (*p == '\n' || *p == '\r') *p = ' ';
 }
 
 void setHidden(lv_obj_t *obj, bool hidden)
@@ -292,7 +296,7 @@ void VirtualNodeList::createRowPool()
 
         row.lblShort = lv_label_create(row.panel);
         lv_obj_set_pos(row.lblShort, 46, 6);
-        lv_obj_set_size(row.lblShort, lv_pct(55), LV_SIZE_CONTENT);
+        lv_obj_set_size(row.lblShort, lv_pct(55), 19);
         lv_label_set_long_mode(row.lblShort, LV_LABEL_LONG_CLIP);
         lv_obj_remove_flag(row.lblShort, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_align(row.lblShort, LV_ALIGN_TOP_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -864,7 +868,7 @@ void VirtualNodeList::bindRow(ReusableRow &row, const NodeRecord &record, bool i
         formatShortName(record, renderContext, formatted, sizeof(formatted));
         lv_snprintf(row.shortText, sizeof(row.shortText), record.favorite ? "F %s" : "%s", formatted);
         lv_label_set_text_static(row.lblShort, row.shortText);
-        lv_obj_set_pos(row.lblShort, 46, std::strchr(row.shortText, '\n') ? -1 : 6);
+        lv_obj_set_pos(row.lblShort, 46, 6);
         row.detailShortId = record.id;
         row.detailFavorite = record.favorite;
         row.detailOwnNode = renderContext.ownNode;

@@ -502,7 +502,7 @@ void Themes::recolorTopLabel(lv_obj_t *obj, bool alert)
     lv_color_t color;
     switch (theme) {
     case eLight:
-        color = alert ? lv_color_hex(0xfff72b2b) : lv_color_hex(THEME(eTopPanelText));
+        color = alert ? lv_color_hex(0xfff72b2b) : lv_color_black();
         break;
     case eDark:
         color = alert ? lv_color_hex(0xfff72b2b) : lv_color_hex(THEME(eTopPanelText));

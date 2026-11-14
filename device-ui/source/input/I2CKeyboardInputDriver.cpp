@@ -24,6 +24,22 @@ I2CKeyboardInputDriver::KeyboardList I2CKeyboardInputDriver::i2cKeyboardList;
 
 I2CKeyboardInputDriver::I2CKeyboardInputDriver(void) {}
 
+#ifdef ELECROW_ThinkNode_M9
+bool I2CKeyboardInputDriver::hasM9Backlight()
+{
+    for (const auto &entry : i2cKeyboardList)
+        if (entry->name == "TM9 Keyboard") return true;
+    return false;
+}
+
+bool I2CKeyboardInputDriver::setM9Backlight(uint8_t duty)
+{
+    for (const auto &entry : i2cKeyboardList)
+        if (entry->name == "TM9 Keyboard") return entry->driver->writeM9Backlight(entry->address, duty);
+    return false;
+}
+#endif
+
 void I2CKeyboardInputDriver::init(void)
 {
     keyboard = lv_indev_create();
@@ -328,6 +344,16 @@ TM9KeyboardInputDriver::TM9KeyboardInputDriver(uint8_t address, TwoWire &wire_) 
     registerI2CKeyboard(this, "TM9 Keyboard", address);
 }
 
+#ifdef ELECROW_ThinkNode_M9
+bool TM9KeyboardInputDriver::writeM9Backlight(uint8_t address, uint8_t duty)
+{
+    wire.beginTransmission(address);
+    wire.write(uint8_t(0x02));
+    wire.write(duty);
+    return wire.endTransmission() == 0;
+}
+#endif
+
 void TM9KeyboardInputDriver::init(void)
 {
     I2CKeyboardInputDriver::init();
@@ -368,14 +394,15 @@ void TM9KeyboardInputDriver::readKeyboard(uint8_t address, lv_indev_t *indev, lv
     if (wire.endTransmission(false) == 0) {
         uint8_t bytes = wire.requestFrom(address, 1);
         if (wire.available() > 0 && bytes > 0) {
-            uint32_t keyValue = wire.read();
+            const int rawKey = wire.read();
+            uint32_t keyValue = rawKey < 0 ? 0 : static_cast<uint32_t>(rawKey);
 #ifdef ELECROW_ThinkNode_M9
             // The controller sends events, not key-down/key-up state. GPIO12 is only a wake pulse.
             if (keyValue == 0xFF)
                 keyValue = 0;
             if (auto *view = TFTView_320x240::currentInstance(); view && view->isScreenLocked()) {
                 while (!pendingEvents.empty()) pendingEvents.pop();
-                if (keyValue && DeviceGUI::m9WakeArmed())
+                if (m9IsWakeKey(keyValue) && DeviceGUI::m9WakeArmed())
                     view->requestScreenWake();
                 data->key = 0;
                 data->state = LV_INDEV_STATE_RELEASED;

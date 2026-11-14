@@ -27,6 +27,11 @@ class I2CKeyboardInputDriver : public InputDriver
 
     using KeyboardList = std::list<std::unique_ptr<KeyboardDefinition>>;
     static KeyboardList &getI2CKeyboardList(void) { return i2cKeyboardList; }
+#ifdef ELECROW_ThinkNode_M9
+    static bool hasM9Backlight();
+    static bool setM9Backlight(uint8_t duty);
+    virtual bool writeM9Backlight(uint8_t, uint8_t) { return false; }
+#endif
 
   protected:
     bool registerI2CKeyboard(I2CKeyboardInputDriver *driver, std::string name, uint8_t address);
@@ -107,6 +112,9 @@ class TM9KeyboardInputDriver : public I2CKeyboardInputDriver
     TM9KeyboardInputDriver(uint8_t address, TwoWire &wire = Wire);
     void init(void) override;
     void readKeyboard(uint8_t address, lv_indev_t *indev, lv_indev_data_t *data) override;
+#ifdef ELECROW_ThinkNode_M9
+    bool writeM9Backlight(uint8_t address, uint8_t duty) override;
+#endif
     virtual ~TM9KeyboardInputDriver(void) {}
 
   private:

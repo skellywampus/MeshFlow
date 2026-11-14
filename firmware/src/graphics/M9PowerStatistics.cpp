@@ -25,11 +25,34 @@ namespace {
 using m9power::Record;
 using m9power::checksum;
 Record data;
+struct BatteryRun {
+    uint32_t magic = 0x42525431, sequence = 0;
+    uint64_t elapsed = 0;
+    uint32_t observedExternal = 0;
+    uint32_t crc = 0;
+};
+BatteryRun batteryRun;
+uint32_t runChecksum(const BatteryRun &r) {
+    const auto *p = reinterpret_cast<const uint8_t *>(&r);
+    uint32_t hash = 2166136261U;
+    for (size_t i = 0; i < offsetof(BatteryRun, crc); ++i) hash = (hash ^ p[i]) * 16777619U;
+    return hash;
+}
 uint64_t last = 0, savedAt = 0, batteryStart = 0;
 uint32_t frequency = 240;
 bool initialized = false, on = true, batteryKnown = false, batteryRunning = false, storageOK = true;
 int initialPercent = -1;
 const char *paths[] = {"/powerstats-a.bin", "/powerstats-b.bin"};
+const char *runPaths[] = {"/battery-run-a.bin", "/battery-run-b.bin"};
+void saveBatteryRun() {
+    if (FSCom.totalBytes() <= FSCom.usedBytes() + sizeof(BatteryRun) * 3) { storageOK = false; return; }
+    ++batteryRun.sequence;
+    batteryRun.crc = runChecksum(batteryRun);
+    auto file = FSCom.open(runPaths[batteryRun.sequence % 2], FILE_O_WRITE);
+    if (!file || file.write(reinterpret_cast<const uint8_t *>(&batteryRun), sizeof(batteryRun)) != sizeof(batteryRun))
+        storageOK = false;
+    if (file) { file.flush(); file.close(); }
+}
 void init() {
     if (initialized) return;
     initialized = true;
@@ -40,6 +63,13 @@ void init() {
             candidate.magic == data.magic && candidate.crc == checksum(candidate) && candidate.sequence >= data.sequence)
             data = candidate;
     }
+    for (const auto *path : runPaths) {
+        BatteryRun candidate;
+        auto file = FSCom.open(path, FILE_O_READ);
+        if (file && file.size() == sizeof(candidate) && file.read(reinterpret_cast<uint8_t *>(&candidate), sizeof(candidate)) == sizeof(candidate) &&
+            candidate.magic == batteryRun.magic && candidate.crc == runChecksum(candidate) && candidate.sequence >= batteryRun.sequence)
+            batteryRun = candidate;
+    }
     last = savedAt = esp_timer_get_time();
 }
 void accrue() {
@@ -47,6 +77,7 @@ void accrue() {
     uint64_t now = esp_timer_get_time(), dt = now - last;
     last = now;
     m9power::advance(data, dt, frequency, on, batteryKnown && batteryRunning);
+    if (batteryKnown && batteryRunning) batteryRun.elapsed += dt;
 }
 void checkpoint() {
     if (last - savedAt < 3600000000ULL) return;
@@ -58,6 +89,7 @@ void checkpoint() {
     auto file = FSCom.open(paths[data.sequence % 2], FILE_O_WRITE);
     storageOK = file && file.write(reinterpret_cast<const uint8_t *>(&data), sizeof(data)) == sizeof(data);
     if (file) { file.flush(); file.close(); }
+    saveBatteryRun();
 }
 void append(std::string &s, const char *fmt, ...) {
     char text[320]; va_list args; va_start(args, fmt); vsnprintf(text, sizeof(text), fmt, args); va_end(args); s += text;
@@ -81,6 +113,11 @@ extern "C" void meshflow_power_sample() {
     const bool valid = powerStatus && powerStatus->isInitialized() && powerStatus->getHasBattery() && pct >= 0 && pct <= 100 && powerStatus->getBatteryVoltageMv() > 0;
     if (!running || !valid) { batteryStart = 0; initialPercent = -1; }
     else if (!batteryStart) { batteryStart = last; initialPercent = pct; }
+    if (known && (!batteryKnown || batteryRunning != running)) {
+        // External power resets the run, even if the battery is not fully charged.
+        if (!running) { batteryRun.elapsed = 0; batteryRun.observedExternal = 1; }
+        saveBatteryRun();
+    }
     batteryKnown = known; batteryRunning = running;
     uint32_t epoch = getValidTime(RTCQualityDevice);
     if (epoch && valid) {
@@ -98,7 +135,10 @@ extern "C" void meshflow_power_text(char *buffer, size_t capacity) {
         append(s, "External power: %s\nCharging: %s\n", powerStatus->getExternalPowerStatus() == meshtastic::OptUnknown ? "unavailable" : powerStatus->getHasUSB() ? "detected" : "not detected",
             powerStatus->getChargingStatus() == meshtastic::OptUnknown ? "unavailable" : powerStatus->getIsCharging() ? "yes" : "no");
     } else append(s, "Battery reading unavailable\n");
-    append(s, "Battery time: %.2f h\nSession: %.2f h\n", hours(data.battery), batteryStart ? hours(last-batteryStart) : 0);
+    if (!batteryKnown) append(s, "Time on battery: unavailable\n");
+    else if (!batteryRunning) append(s, "Time on battery: on external power\n");
+    else append(s, "Time on battery: %.2f h%s\n", hours(batteryRun.elapsed), batteryRun.observedExternal ? "" : " (partial)");
+    append(s, "Uptime: %.2f h\n", hours(esp_timer_get_time()));
     if (batteryStart && last-batteryStart >= 1800000000ULL && initialPercent >= int(powerStatus->getBatteryChargePercent()))
         append(s, "Discharge estimate: %.2f %%/h\n", (initialPercent-powerStatus->getBatteryChargePercent())/hours(last-batteryStart));
     else append(s, "Discharge estimate: n/a (<30 min samples)\n");

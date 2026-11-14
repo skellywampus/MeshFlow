@@ -19,6 +19,7 @@
 #include "graphics/DeviceGUI.h"
 #ifdef ELECROW_ThinkNode_M9
 #include "graphics/common/M9NodeActions.h"
+#include "input/I2CKeyboardInputDriver.h"
 extern "C" bool meshflow_m9_request_gps(bool enabled);
 extern "C" void meshflow_m9_request_gps_fix();
 extern "C" int meshflow_m9_gps_fix_status();
@@ -70,6 +71,7 @@ extern "C" bool meshflow_m9_set_ringtone_volume(uint8_t volume);
 
 #ifdef ELECROW_ThinkNode_M9
 extern "C" void meshflow_preview_ringtone(const char *tone) __attribute__((weak));
+
 #endif
 
 #if defined(ARCH_PORTDUINO)
@@ -1905,6 +1907,7 @@ void TFTView_320x240::apply_hotfix(void)
             }
         }, LV_EVENT_CLICKED, nullptr);
         lv_obj_move_to_index(button, lv_obj_get_index(objects.basic_settings_alert_button) + 1);
+
     }
 #endif
 
@@ -2023,7 +2026,10 @@ void TFTView_320x240::apply_hotfix(void)
 
 void TFTView_320x240::updateTheme(void)
 {
+    const bool batteryAlert = lv_color_eq(lv_obj_get_style_text_color(objects.battery_percentage_label, LV_PART_MAIN),
+                                          lv_color_hex(0xf72b2b));
     Themes::initStyles();
+    Themes::recolorTopLabel(objects.battery_percentage_label, batteryAlert);
     // Bubble colors are applied when each message is created. Invalidate the
     // small rendered-thread cache so cached conversations rebuild with the
     // selected palette when the user opens them again.
@@ -2474,6 +2480,41 @@ void TFTView_320x240::ui_events_init(void)
 
 #ifdef ELECROW_ThinkNode_M9
     setupPowerStatistics();
+    // Both pages share an LVGL group. Keep Up/Down on the active page even
+    // when LVGL reaches a focusable row on the off-screen tab.
+    for (lv_obj_t *page : {objects.tab_page_basic_settings, objects.tab_page_tools}) {
+        for (uint32_t i = 0; i < lv_obj_get_child_count(page); ++i) {
+            lv_obj_t *row = lv_obj_get_child(page, i);
+            lv_obj_add_event_cb(row, [](lv_event_t *event) {
+                auto *self = static_cast<TFTView_320x240 *>(lv_event_get_user_data(event));
+                lv_indev_t *indev = lv_indev_active();
+                if (!self || !indev || lv_indev_get_type(indev) != LV_INDEV_TYPE_KEYPAD ||
+                    self->activePanel != objects.controller_panel || self->activeSettings != eNone)
+                    return;
+                const uint32_t key = lv_indev_get_key(indev);
+                if (key != LV_KEY_NEXT && key != LV_KEY_PREV)
+                    return;
+                lv_obj_t *activePage = lv_tabview_get_tab_active(objects.controller_tab_view) == 0
+                                           ? objects.tab_page_basic_settings : objects.tab_page_tools;
+                if (lv_obj_get_parent(lv_event_get_target_obj(event)) == activePage)
+                    return;
+                lv_obj_t *boundary = nullptr;
+                for (uint32_t j = 0; j < lv_obj_get_child_count(activePage); ++j) {
+                    lv_obj_t *candidate = lv_obj_get_child(activePage, j);
+                    if (lv_obj_get_group(candidate) != self->defaultPanelGroup ||
+                        lv_obj_has_flag(candidate, LV_OBJ_FLAG_HIDDEN) || lv_obj_has_state(candidate, LV_STATE_DISABLED))
+                        continue;
+                    boundary = candidate;
+                    if (key == LV_KEY_PREV)
+                        break;
+                }
+                if (boundary) {
+                    lv_event_stop_processing(event);
+                    lv_group_focus_obj(boundary);
+                }
+            }, static_cast<lv_event_code_t>(LV_EVENT_FOCUSED | LV_EVENT_PREPROCESS), this);
+        }
+    }
 #endif
     // tools buttons
     lv_obj_add_event_cb(objects.tools_mesh_detector_button, ui_event_mesh_detector, LV_EVENT_CLICKED, 0);
@@ -7166,7 +7207,7 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
         static_cast<uint32_t>(reinterpret_cast<uintptr_t>(container->user_data));
     lv_obj_t *senderLabel = nullptr;
     if (ChatSenderPresentation::isIncomingGroupMessage(conversationId, c_max_channels, entry.sent, entry.node)) {
-        const char *sender = ChatSenderPresentation::preferredName(nodeShortName(entry.node), nodeDisplayName(entry.node));
+        const char *sender = ChatSenderPresentation::preferredName(nodeDisplayName(entry.node), nodeShortName(entry.node));
         if (sender) {
             senderLabel = lv_label_create(hiddenPanel);
             lv_label_set_text(senderLabel, sender);
@@ -7174,7 +7215,8 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
             lv_obj_set_width(senderLabel, LV_PCT(100));
             lv_obj_set_height(senderLabel, LV_SIZE_CONTENT);
             lv_obj_set_style_text_font(senderLabel, &ui_font_montserrat_12, LV_PART_MAIN);
-            lv_obj_set_style_text_color(senderLabel, colorBlueGreen, LV_PART_MAIN);
+            lv_obj_set_style_text_color(senderLabel, Themes::get() == Themes::eLight ? lv_color_black() : colorBlueGreen,
+                                        LV_PART_MAIN);
             lv_obj_set_align(senderLabel, LV_ALIGN_TOP_LEFT);
         }
     }
@@ -8800,6 +8842,7 @@ void TFTView_320x240::screenSaving(bool enabled)
         return;
     }
 #ifdef ELECROW_ThinkNode_M9
+    I2CKeyboardInputDriver::setM9Backlight(enabled ? 0 : 255);
     // Dismiss this read-only modal before handing keyboard focus to stock sleep/lock UI.
     // Collection continues independently; reopening returns current statistics.
     if (enabled && powerStatisticsView) closeNodeContext(false);
@@ -8858,6 +8901,7 @@ void TFTView_320x240::requestScreenLock(bool immediate)
     screenUnlockRequest = false;
 #ifdef ELECROW_ThinkNode_M9
     DeviceGUI::noteM9ScreenLock();
+    if (immediate) I2CKeyboardInputDriver::setM9Backlight(0);
 #endif
     if (immediate)
         displaydriver->requestImmediateScreenSleep();
@@ -8873,6 +8917,7 @@ void TFTView_320x240::requestScreenWake()
     if (!displaydriver->isPowersaving() && lv_scr_act() != objects.blank_screen) {
         screenLocked = false;
         screenUnlockRequest = false;
+        I2CKeyboardInputDriver::setM9Backlight(255);
     }
     DeviceGUI::noteM9ScreenWake();
 #endif
@@ -9558,16 +9603,22 @@ void TFTView_320x240::newMessage(uint32_t from, uint32_t to, uint8_t ch, const c
 
     if (!restore) {
         // display msg popup if not already viewing the messages
-        if (container != activeMsgContainer || activePanel != objects.messages_panel) {
+        const bool viewingChat = container == activeMsgContainer && activePanel == objects.messages_panel;
+#ifdef ELECROW_ThinkNode_M9
+        const bool unseen = !viewingChat || screenLocked;
+#else
+        const bool unseen = !viewingChat;
+#endif
+        if (unseen) {
             chatUnreadTracker.record((to == UINT32_MAX || from == 0) ? ch : from);
             updateUnreadMessages();
             if (activePanel != objects.messages_panel && db.uiConfig.banner_enabled &&
                 !db.channel[ch].settings.module_settings.is_muted) {
                 showMessagePopup(from, to, ch, nodeDisplayName(from) ? nodeDisplayName(from) : "");
             }
-            lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
+            if (!viewingChat) lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
         }
-        if (container != activeMsgContainer || activePanel != objects.messages_panel) {
+        if (unseen) {
             highlightChat(from, to, ch);
             if (container != activeMsgContainer && activePanel != objects.messages_panel) {
                 lv_obj_add_flag(activeMsgContainer, LV_OBJ_FLAG_HIDDEN);

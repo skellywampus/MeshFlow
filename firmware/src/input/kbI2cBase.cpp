@@ -17,6 +17,7 @@
 
 #if defined(ELECROW_ThinkNode_M9)
 #include "STC8HKeyboard.h"
+#include "input/M9KeyboardEventLatch.h"
 #include "graphics/DeviceGUI.h"
 #include "graphics/view/TFT/TFTView_320x240.h"
 #include "graphics/Screen.h"                    // for the global `screen` + FrameFocus
@@ -573,7 +574,7 @@ int32_t KbI2cBase::runOnce()
         uint8_t c = Stc8HKeyBoard.bsp_get_key_value(); // unsigned so the 0x8x/0xbx codes match
         if (DeviceGUI::suppressM9Key(c)) {
             if (auto *view = TFTView_320x240::currentInstance(); view && view->isScreenLocked() &&
-                     DeviceGUI::m9WakeArmed() && c != 0 && c != 0xFF)
+                     DeviceGUI::m9WakeArmed() && m9IsWakeKey(c))
                 view->requestScreenWake();
             break; // The wake key must not trigger a firmware shortcut.
         }

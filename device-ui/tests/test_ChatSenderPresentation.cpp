@@ -11,9 +11,9 @@ TEST_CASE("only incoming channel messages get a sender line")
     CHECK_FALSE(ChatSenderPresentation::isIncomingGroupMessage(1, 8, false, 0));
 }
 
-TEST_CASE("group sender line prefers short name and falls back to long name")
+TEST_CASE("group sender line prefers long name and falls back to short name")
 {
-    CHECK(std::string(ChatSenderPresentation::preferredName("ABCD", "River Runner")) == "ABCD");
-    CHECK(std::string(ChatSenderPresentation::preferredName("", "River Runner")) == "River Runner");
+    CHECK(std::string(ChatSenderPresentation::preferredName("River Runner", "ABCD")) == "River Runner");
+    CHECK(std::string(ChatSenderPresentation::preferredName("", "ABCD")) == "ABCD");
     CHECK(ChatSenderPresentation::preferredName(nullptr, "") == nullptr);
 }

@@ -9,12 +9,12 @@ inline bool isIncomingGroupMessage(uint32_t conversationId, uint32_t channelCoun
     return conversationId < channelCount && !sent && senderId != 0;
 }
 
-inline const char *preferredName(const char *shortName, const char *longName)
+inline const char *preferredName(const char *longName, const char *shortName)
 {
-    if (shortName && shortName[0])
-        return shortName;
     if (longName && longName[0])
         return longName;
+    if (shortName && shortName[0])
+        return shortName;
     return nullptr;
 }
 
