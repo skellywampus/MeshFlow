@@ -34,7 +34,7 @@ MeshFlow's M9 power work includes lower CPU frequency while the display is off, 
 
 ## Quality-of-life changes
 
-- The home screen and launcher are arranged for the M9's compact display, with keyboard and directional-pad navigation in mind.
+- The home screen and launcher are arranged for the M9's compact display, with keyboard and directional-pad navigation in mind. The Home online count is refreshed from the node store at startup and as node activity changes, without needing to open the Nodes list.
 - Chats and message bubbles are kept aligned with the newest conversation. If you are already at the bottom, new messages and delivery-status changes follow the latest message; scrolling back to older messages should preserve your place.
 - Failed outgoing messages are retried automatically before being marked failed. Delivery status remains visible in the conversation.
 - Favorite nodes are grouped at the top of the node list while still respecting active filters.

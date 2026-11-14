@@ -452,6 +452,9 @@ void TFTView_320x240::init(IClientBase *client)
 {
     ILOG_DEBUG("TFTView_320x240 init...");
     ILOG_DEBUG("TFTView_320x240 db size: %d", sizeof(TFTView_320x240));
+#ifndef ELECROW_ThinkNode_M9
+    // This diagnostic enumerates every image and prevents the linker from
+    // discarding unreferenced assets. Keep it on other targets.
     ILOG_DEBUG("### Images size in flash ###");
     uint32_t total_size = 0;
     for (int i = 0; i < sizeof(images) / sizeof(ext_img_desc_t); i++) {
@@ -460,6 +463,7 @@ void TFTView_320x240::init(IClientBase *client)
     }
     ILOG_DEBUG("================================");
     ILOG_DEBUG("### Total size: %d bytes ###", total_size);
+#endif
 
     MeshtasticView::init(client);
 
@@ -7792,6 +7796,7 @@ void TFTView_320x240::addNode(uint32_t nodeNum, uint8_t ch, const char *userShor
 void TFTView_320x240::setMyInfo(uint32_t nodeNum, meshtastic_MyNodeInfo_device_id_t device_id)
 {
     ownNode = nodeNum;
+    onlineCountDirty = true;
     sprintf(db.device_str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", device_id.bytes[0],
             device_id.bytes[1], device_id.bytes[2], device_id.bytes[3], device_id.bytes[4], device_id.bytes[5],
             device_id.bytes[6], device_id.bytes[7], device_id.bytes[8], device_id.bytes[9], device_id.bytes[10],
@@ -8538,6 +8543,7 @@ void TFTView_320x240::purgeNode(uint32_t nodeNum)
     }
     removeFromMap(nodeNum);
     nodeStore.remove(nodeNum);
+    onlineCountDirty = true;
     if (currentNode == nodeNum)
         selectNode(0);
 }
@@ -10548,14 +10554,7 @@ void TFTView_320x240::syncNodeListPresentation(bool forceRebind)
     }
     nodeCount = static_cast<uint16_t>(nodeStore.size());
     nodesFiltered = static_cast<uint16_t>(nodeCount - visibleNodes.size());
-    nodesOnline = 0;
-    for (const auto &entry : nodeStore.records()) {
-        const uint32_t lastHeard = entry.first == ownNode ? static_cast<uint32_t>(curtime) : entry.second.lastHeard;
-        const uint32_t effectiveLastHeard = std::min(lastHeard, static_cast<uint32_t>(curtime));
-        if (effectiveLastHeard && static_cast<uint32_t>(curtime) - effectiveLastHeard <= secs_until_offline) {
-            nodesOnline++;
-        }
-    }
+    onlineCountDirty = true;
     updateNodesStatus();
     if (activePanel == objects.nodes_panel) {
         ensureVirtualNodeList();
@@ -10580,6 +10579,9 @@ void TFTView_320x240::requestNodeListPresentation(const NodeMutation &mutation)
     if (mutation.kind == NodeMutationKind::Unchanged) {
         return;
     }
+    if (mutation.kind == NodeMutationKind::Inserted || mutation.kind == NodeMutationKind::Removed ||
+        (mutation.changedFields & NodeFieldLastHeard))
+        onlineCountDirty = true;
     if (mutation.kind == NodeMutationKind::Updated && mutation.id) {
         nodeListPresentationRefreshIds.insert(mutation.id);
         if (!mutationCanRefreshVirtualRow(mutation)) {
@@ -10753,8 +10755,16 @@ void TFTView_320x240::setNodeImage(uint32_t nodeNum, eRole role, bool unmessagab
     NodeListRowPresentation::applyNodeImage(img, nodeNum, source, unmessagable, false);
 }
 
+void TFTView_320x240::refreshOnlineCount(void)
+{
+    nodesOnline = static_cast<uint32_t>(nodeStore.onlineCount(static_cast<uint32_t>(curtime), ownNode, secs_until_offline));
+    onlineCountDirty = false;
+}
+
 void TFTView_320x240::updateNodesStatus(void)
 {
+    if (onlineCountDirty)
+        refreshOnlineCount();
     char buf[40];
     lv_snprintf(buf, sizeof(buf), _("%d Online"), nodesOnline);
     const bool homeSurfaceVisible = lv_scr_act() == objects.main_screen && activePanel == objects.home_panel;
@@ -10808,6 +10818,7 @@ void TFTView_320x240::updateAllLastHeard(void)
     if (ownNode)
         nodeStore.updateLastHeard(ownNode, curtime);
     nodesChanged = true;
+    onlineCountDirty = true;
 }
 
 void TFTView_320x240::updateUnreadMessages(void)
@@ -11110,6 +11121,8 @@ void TFTView_320x240::task_handler(void)
             map->task_handler();
 
         if (curtime - lastrun1 >= 1) { // call every 1s
+            if (activeDisplaySurface && activePanel == objects.home_panel && onlineCountDirty)
+                updateNodesStatus();
 #ifdef ELECROW_ThinkNode_M9
             static int previousFixStatus = 0;
             const int fixStatus = meshflow_m9_gps_fix_status();

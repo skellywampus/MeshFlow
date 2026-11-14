@@ -149,6 +149,17 @@ NodeMutation updated(NodeId id, uint32_t fields)
 
 NodeStore::NodeStore() = default;
 
+size_t NodeStore::onlineCount(uint32_t now, NodeId ownNode, uint32_t offlineSeconds) const
+{
+    size_t count = 0;
+    for (const auto &[id, record] : nodes) {
+        const uint32_t lastHeard = id == ownNode ? now : effectiveLastHeard(record, now);
+        if (lastHeard && now - lastHeard <= offlineSeconds)
+            ++count;
+    }
+    return count;
+}
+
 void NodeStore::ensureCapacity()
 {
     if (!capacityReserved) {

@@ -59,6 +59,23 @@ void operator delete(void *ptr, std::size_t) noexcept
     std::free(ptr);
 }
 
+TEST_CASE("online count follows node arrivals, aging, removals and the local node")
+{
+    NodeStore store;
+    const auto user = makeUser("NODE", "Example node");
+    store.upsertUser(1, 0, 0, user, false);
+    store.upsertUser(2, 0, 990, user, false);
+    store.upsertUser(3, 0, 800, user, false);
+    store.upsertUser(4, 0, 1050, user, false);
+    CHECK(store.onlineCount(1000, 1, 100) == 3); // own, recent, and future timestamp
+    store.updateLastHeard(3, 1000);
+    CHECK(store.onlineCount(1000, 1, 100) == 4);
+    CHECK(store.onlineCount(1101, 1, 100) == 2); // local and future-timestamp node
+    store.remove(4);
+    CHECK(store.onlineCount(1101, 1, 100) == 1);
+    CHECK(store.onlineCount(0, 1, 100) == 0);
+}
+
 TEST_CASE("node store retains typed user fields without LVGL")
 {
     NodeStore store;

@@ -166,6 +166,7 @@ class NodeStore
     const NodeRecord *find(NodeId id) const;
     const Records &records() const { return nodes; }
     size_t size() const { return nodes.size(); }
+    size_t onlineCount(uint32_t now, NodeId ownNode, uint32_t offlineSeconds) const;
 
     NodeMutation upsertUser(NodeId id, uint8_t channel, uint32_t lastHeard, const meshtastic_User &user, bool viaMqtt);
     NodeMutation upsertUnknown(NodeId id, uint8_t channel, uint32_t lastHeard, uint8_t role, bool hasKey, bool viaMqtt);

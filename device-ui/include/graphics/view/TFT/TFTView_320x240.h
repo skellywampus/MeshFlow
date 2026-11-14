@@ -382,6 +382,8 @@ class TFTView_320x240 : public MeshtasticView, private NodeListActionSink
     void syncVisibleNodeIndex(void);
     void syncNodeListPresentation(void);
     void syncNodeListPresentation(bool forceRebind);
+    bool onlineCountDirty = true;
+    void refreshOnlineCount(void);
     void requestNodeListPresentation(const NodeMutation &mutation);
     void flushNodeListPresentation(void);
     void ensureVirtualNodeList(void);

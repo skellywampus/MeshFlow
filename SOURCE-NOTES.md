@@ -4,6 +4,7 @@ This directory is a snapshot assembled from the local MeshFlow workspace. It inc
 
 - Meshtastic firmware base: `64dd5b314af986d300b8f7c08c54f9b90ff52e6e`.
 - Meshtastic Device UI base: `79dc3ff34f73c66ef4cbc6d5457eb2748b0ba815`.
+- The latest snapshot includes an M9 online-count correction: `NodeStore` computes the online count from current last-heard data, Home refreshes the header when that value becomes stale, and node-list rendering remains deferred until needed. The focused host regression suite passed 30 cases and 193 assertions.
 - The beta firmware was built locally as the `thinknode_m9-tft` target with PlatformIO and ESP-IDF 5.5.5, using a locally prepared SDK and cached dependencies.
 - The firmware snapshot does not include Git history. The `protobufs` and `meshtestic` directories contain exported source at the upstream gitlink revisions `85f3f4357946a52daa5310285476d2dffb137c7b` and `dcac7e5673005f4d8a2b1f0f6e06877b689d7519` respectively. Consult `firmware/.gitmodules` for upstream repositories.
 - Absolute package-cache paths were removed from `firmware/platformio.ini`; the M9 target was adjusted to refer to the adjacent Device UI snapshot. The Desktop source snapshot built successfully for `thinknode_m9-tft` using the existing locally prepared SDK and newly resolved project dependencies. This was not an independent SDK build.
