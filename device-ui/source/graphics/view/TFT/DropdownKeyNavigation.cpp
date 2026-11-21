@@ -20,14 +20,20 @@ void enterEditMode(lv_obj_t *dropdown)
     lv_dropdown_set_selected_highlight(dropdown, true);
     if (auto *list = lv_dropdown_get_list(dropdown)) {
         const bool dark = Themes::get() == Themes::eDark;
+        if (!dark) {
+            lv_obj_set_style_bg_color(list, lv_color_white(), LV_PART_MAIN);
+            lv_obj_set_style_text_color(list, lv_color_hex(0x101820), LV_PART_MAIN);
+            lv_obj_set_style_border_color(list, lv_color_hex(0x003b70), LV_PART_MAIN);
+        }
         const lv_state_t states[] = {LV_STATE_DEFAULT, LV_STATE_CHECKED, LV_STATE_PRESSED,
                                      static_cast<lv_state_t>(LV_STATE_CHECKED | LV_STATE_PRESSED)};
         for (lv_state_t state : states) {
             const auto selector = static_cast<lv_style_selector_t>(LV_PART_SELECTED | state);
-            lv_obj_set_style_bg_color(list, lv_color_hex(dark ? 0x000000 : 0x18271d), selector);
+            lv_obj_set_style_bg_color(list, lv_color_hex(dark ? 0x000000 : 0x000000), selector);
             lv_obj_set_style_bg_opa(list, LV_OPA_COVER, selector);
-            lv_obj_set_style_text_color(list, lv_color_hex(dark ? 0xffffff : 0xe7f3ea), selector);
-            lv_obj_set_style_border_width(list, 0, selector);
+            lv_obj_set_style_text_color(list, lv_color_hex(dark ? 0xffffff : 0xffffff), selector);
+            lv_obj_set_style_border_width(list, dark ? 0 : 2, selector);
+            if (!dark) lv_obj_set_style_border_color(list, lv_color_hex(0xffd400), selector);
             lv_obj_set_style_outline_width(list, 0, selector);
             lv_obj_set_style_bg_image_opa(list, LV_OPA_TRANSP, selector);
         }

@@ -34,7 +34,7 @@ MeshFlow's M9 power work includes lower CPU frequency while the display is off, 
 
 ## Quality-of-life changes
 
-- The home screen and launcher are arranged for the M9's compact display, with keyboard and directional-pad navigation in mind. The Home online count is refreshed from the node store at startup and as node activity changes, without needing to open the Nodes list.
+- The home screen and launcher are arranged for the M9's compact display, with keyboard and directional-pad navigation in mind. Light mode uses a high-contrast white, black, dark-blue, and yellow palette for outdoor readability. The Home online count is refreshed from the node store at startup and as node activity changes, without needing to open the Nodes list.
 - Chats and message bubbles are kept aligned with the newest conversation. If you are already at the bottom, new messages and delivery-status changes follow the latest message; scrolling back to older messages should preserve your place.
 - Failed outgoing messages are retried automatically before being marked failed. Delivery status remains visible in the conversation.
 - Favorite nodes are grouped at the top of the node list while still respecting active filters.
@@ -49,6 +49,8 @@ MeshFlow's M9 power work includes lower CPU frequency while the display is off, 
 I designed the home dashboard and launcher around the M9's 320 × 240 screen. Use the directional pad to move the selection and Center or Enter to open an item. Home, Messages, Nodes, Channels, Maps, Settings, and status information use layouts adapted to the display. The home screen shows the clock, date, battery, Wi-Fi, and GPS status.
 
 ### Messages
+
+When viewing a conversation, press **Up** from the composer to select the latest message. In message history, press **Left** for message selection or **Right** for stepped scrolling; Up/Down then select messages or scroll in small steps. The envelope or ruler beside the battery indicates the current mode. Left and Right move the cursor normally while editing a message. Long-press Center on an eligible outgoing message to open its actions, including Retry.
 
 Open **Messages** and select a conversation to view and send messages with the physical keyboard. MeshFlow shows delivery status on outgoing messages and opens conversations at their most recent messages. When you are already at the bottom, incoming messages and status updates should remain visible; you can scroll up to read earlier messages without being pulled back down.
 

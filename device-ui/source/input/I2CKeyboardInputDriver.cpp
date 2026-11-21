@@ -480,6 +480,13 @@ void TM9KeyboardInputDriver::readKeyboard(uint8_t address, lv_indev_t *indev, lv
                     break;
                 }
 
+#ifdef ELECROW_ThinkNode_M9
+                if (auto *view = TFTView_320x240::currentInstance(); view && view->handleChatScrollKey(keyValue)) {
+                    data->key = 0;
+                    data->state = LV_INDEV_STATE_RELEASED;
+                    return;
+                }
+#endif
                 if (keyValue != 0) {
                     uint32_t outKey = keyValue;
                     bool enqueue = true;

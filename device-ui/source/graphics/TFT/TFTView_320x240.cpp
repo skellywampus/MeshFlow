@@ -152,6 +152,8 @@ static void scrollChatToBottom(lv_obj_t *container)
 
 static void scrollChatFocus(lv_event_t *event)
 {
+    if (auto *updating = static_cast<bool *>(lv_event_get_user_data(event)); updating && *updating)
+        return;
     lv_obj_t *label = lv_event_get_target_obj(event);
     lv_obj_t *row = lv_obj_get_parent(label);
     lv_obj_t *container = row ? lv_obj_get_parent(row) : nullptr;
@@ -805,6 +807,12 @@ void TFTView_320x240::init_screens(void)
     ui_init();
 #ifdef ELECROW_ThinkNode_M9
     // These objects belong to the main screen, which does not exist during init().
+    chatModeIndicator = lv_label_create(objects.battery_panel);
+    lv_label_set_text_static(chatModeIndicator, "\xE2\x9C\x89");
+    lv_obj_set_style_text_font(chatModeIndicator, LV_FONT_DEFAULT, LV_PART_MAIN);
+    lv_obj_add_flag(chatModeIndicator, static_cast<lv_obj_flag_t>(LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_IGNORE_LAYOUT));
+    lv_obj_set_style_align(chatModeIndicator, LV_ALIGN_LEFT_MID, LV_PART_MAIN);
+    lv_obj_set_pos(chatModeIndicator, 2, 0);
     lv_obj_set_width(objects.battery_panel, LV_PCT(36));
     lv_obj_set_width(objects.battery_percentage_label, LV_PCT(62));
     lv_obj_set_pos(objects.battery_percentage_label, 4, 0);
@@ -964,14 +972,14 @@ void TFTView_320x240::createLauncher(void)
     lv_obj_set_style_radius(launcherPanel, 0, LV_PART_MAIN);
     lv_obj_set_style_border_width(launcherPanel, 0, LV_PART_MAIN);
     const bool darkTheme = Themes::get() == Themes::eDark;
-    const lv_color_t launcherBg = darkTheme ? lv_color_hex(0x09120d) : lv_color_hex(0xf3f8f4);
+    const lv_color_t launcherBg = darkTheme ? lv_color_hex(0x09120d) : lv_color_hex(0xffffff);
     const lv_color_t launcherCard = darkTheme ? lv_color_hex(0x14251b) : lv_color_hex(0xffffff);
-    const lv_color_t launcherText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x203b2c);
-    const lv_color_t launcherMuted = darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x526b5b);
-    const lv_color_t launcherFocus = darkTheme ? lv_color_hex(0x234633) : lv_color_hex(0xd6ecdc);
-    const lv_color_t appSurface = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xf3f8f4);
-    const lv_color_t appHeader = darkTheme ? lv_color_hex(0x1c3023) : lv_color_hex(0xe4f3e8);
-    const lv_color_t appBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x8bb899);
+    const lv_color_t launcherText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x101820);
+    const lv_color_t launcherMuted = darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x334155);
+    const lv_color_t launcherFocus = darkTheme ? lv_color_hex(0x234633) : lv_color_hex(0x000000);
+    const lv_color_t appSurface = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xffffff);
+    const lv_color_t appHeader = darkTheme ? lv_color_hex(0x1c3023) : lv_color_hex(0xffffff);
+    const lv_color_t appBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x003b70);
     for (lv_obj_t *panel : {objects.chats_panel, objects.messages_panel, objects.nodes_panel, objects.groups_panel}) {
         if (!panel)
             continue;
@@ -1013,7 +1021,7 @@ void TFTView_320x240::createLauncher(void)
     lv_obj_t *title = lv_label_create(header);
     lv_label_set_text_static(title, "MeshFlow");
     lv_obj_set_style_text_font(title, &ui_font_montserrat_16, LV_PART_MAIN);
-    lv_obj_set_style_text_color(title, darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x2d6f46), LV_PART_MAIN);
+    lv_obj_set_style_text_color(title, darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x003b70), LV_PART_MAIN);
 
     dashboardDeviceLabel = lv_label_create(header);
     lv_label_set_text(dashboardDeviceLabel, "--  WiFi --  GPS --");
@@ -1043,7 +1051,7 @@ void TFTView_320x240::createLauncher(void)
         lv_obj_set_style_bg_color(card, launcherFocus, LV_PART_MAIN | LV_STATE_FOCUSED);
         lv_obj_set_style_text_color(card, launcherText, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_opa(card, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_border_color(card, accent, LV_PART_MAIN);
+        lv_obj_set_style_border_color(card, Themes::get() == Themes::eLight ? lv_color_hex(0x003b70) : accent, LV_PART_MAIN);
         lv_obj_set_style_border_width(card, 1, LV_PART_MAIN);
         lv_obj_set_style_pad_hor(card, 6, LV_PART_MAIN);
         lv_obj_set_style_pad_ver(card, 2, LV_PART_MAIN);
@@ -1132,9 +1140,9 @@ void TFTView_320x240::createLauncher(void)
         lv_obj_set_style_radius(tile, 8, LV_PART_MAIN);
         lv_obj_set_style_bg_color(tile, launcherCard, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_color(tile, launcherFocus, LV_PART_MAIN | LV_STATE_FOCUSED);
-        lv_obj_set_style_bg_color(tile, darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x2d6f46),
+        lv_obj_set_style_bg_color(tile, darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x003b70),
                                   LV_PART_MAIN | LV_STATE_PRESSED);
-        lv_obj_set_style_border_color(tile, lv_color_hex(0x2d6d47), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_border_color(tile, darkTheme ? lv_color_hex(0x2d6d47) : lv_color_hex(0x003b70), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_width(tile, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(tile, launcherText, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(tile, darkTheme ? lv_color_hex(0x102016) : lv_color_white(), LV_PART_MAIN | LV_STATE_PRESSED);
@@ -1239,7 +1247,7 @@ void TFTView_320x240::updateDashboardDeviceStatus(void)
         lv_snprintf(battery, sizeof(battery), "%u%%", (unsigned)ownRecord->deviceMetrics.battery_level);
     } else if (ownRecord && ownRecord->hasDeviceMetrics && ownRecord->deviceMetrics.battery_level != UINT32_MAX &&
                ownRecord->deviceMetrics.battery_level > 100) {
-        lv_snprintf(battery, sizeof(battery), "%s", _("Charge"));
+        lv_snprintf(battery, sizeof(battery), "%s", Themes::get() == Themes::eLight ? _("Charging") : _("Charge"));
     } else {
         lv_snprintf(battery, sizeof(battery), "%s", _("--"));
     }
@@ -1354,6 +1362,18 @@ void TFTView_320x240::showActivePanel(lv_obj_t *b, lv_obj_t *p, lv_obj_t *tp)
 {
     hideLauncher();
     const bool panelChanged = p != activePanel;
+#ifdef ELECROW_ThinkNode_M9
+    if (chatModeIndicator) {
+        lv_obj_set_flag(chatModeIndicator, LV_OBJ_FLAG_HIDDEN, p != objects.messages_panel);
+        if (p == objects.messages_panel) {
+            lv_label_set_text_static(chatModeIndicator, chatStepScroll ? "\xF0\x9F\x93\x8F" : "\xE2\x9C\x89");
+            lv_obj_move_foreground(chatModeIndicator);
+        }
+        lv_obj_set_pos(objects.battery_percentage_label, p == objects.messages_panel ? 20 : 4, 0);
+        lv_obj_set_width(objects.battery_percentage_label, p == objects.messages_panel ? 65 :
+                         (Themes::get() == Themes::eDark ? LV_PCT(62) : LV_PCT(70)));
+    }
+#endif
     if (panelChanged && activePanel && !restoringPanelHistory && !previewingMainButton) {
         panelHistory.push_back({activeButton, activePanel, activeTopPanel});
         if (panelHistory.size() > 16)
@@ -2034,19 +2054,22 @@ void TFTView_320x240::updateTheme(void)
                                           lv_color_hex(0xf72b2b));
     Themes::initStyles();
     Themes::recolorTopLabel(objects.battery_percentage_label, batteryAlert);
+#ifdef ELECROW_ThinkNode_M9
+    if (chatModeIndicator) Themes::recolorTopLabel(chatModeIndicator, false);
+#endif
     // Bubble colors are applied when each message is created. Invalidate the
     // small rendered-thread cache so cached conversations rebuild with the
     // selected palette when the user opens them again.
     chatRenderSnapshots.clear();
     const bool darkTheme = Themes::get() == Themes::eDark;
-    const lv_color_t launcherBg = darkTheme ? lv_color_hex(0x09120d) : lv_color_hex(0xf3f8f4);
+    const lv_color_t launcherBg = darkTheme ? lv_color_hex(0x09120d) : lv_color_hex(0xffffff);
     const lv_color_t launcherCard = darkTheme ? lv_color_hex(0x14251b) : lv_color_hex(0xffffff);
-    const lv_color_t launcherText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x203b2c);
-    const lv_color_t launcherMuted = darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x526b5b);
-    const lv_color_t launcherFocus = darkTheme ? lv_color_hex(0x234633) : lv_color_hex(0xd6ecdc);
-    const lv_color_t appSurface = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xf3f8f4);
-    const lv_color_t appHeader = darkTheme ? lv_color_hex(0x1c3023) : lv_color_hex(0xe4f3e8);
-    const lv_color_t appBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x8bb899);
+    const lv_color_t launcherText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x101820);
+    const lv_color_t launcherMuted = darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x334155);
+    const lv_color_t launcherFocus = darkTheme ? lv_color_hex(0x234633) : lv_color_hex(0x000000);
+    const lv_color_t appSurface = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xffffff);
+    const lv_color_t appHeader = darkTheme ? lv_color_hex(0x1c3023) : lv_color_hex(0xffffff);
+    const lv_color_t appBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x003b70);
     for (lv_obj_t *panel : {objects.chats_panel, objects.messages_panel, objects.nodes_panel, objects.groups_panel}) {
         if (panel) {
             lv_obj_set_style_bg_color(panel, appSurface, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2065,7 +2088,7 @@ void TFTView_320x240::updateTheme(void)
         lv_obj_t *header = lv_obj_get_child(launcherPanel, 0);
         if (header && lv_obj_get_child_count(header) >= 2) {
             lv_obj_set_style_text_color(lv_obj_get_child(header, 0),
-                                        darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x2d6f46), LV_PART_MAIN);
+                                        darkTheme ? lv_color_hex(0x67ea94) : lv_color_hex(0x003b70), LV_PART_MAIN);
             lv_obj_set_style_text_color(lv_obj_get_child(header, 1), launcherMuted, LV_PART_MAIN);
         }
         for (lv_obj_t *tile : launcherTiles) {
@@ -2100,36 +2123,36 @@ void TFTView_320x240::updateTheme(void)
                 lv_obj_set_style_text_color(label, launcherMuted, LV_PART_MAIN);
         }
     }
-    const lv_color_t composerBackground = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xf3f8f4);
-    const lv_color_t composerForeground = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x203b2c);
-    const lv_color_t composerMuted = darkTheme ? lv_color_hex(0x8b9a90) : lv_color_hex(0x668070);
-    const lv_color_t composerBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x8bb899);
+    const lv_color_t composerBackground = darkTheme ? lv_color_hex(0x111915) : lv_color_hex(0xffffff);
+    const lv_color_t composerForeground = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x101820);
+    const lv_color_t composerMuted = darkTheme ? lv_color_hex(0x8b9a90) : lv_color_hex(0x334155);
+    const lv_color_t composerBorder = darkTheme ? lv_color_hex(0x315b3e) : lv_color_hex(0x003b70);
     lv_obj_set_style_bg_color(objects.message_input_area, composerBackground, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(objects.message_input_area, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(objects.message_input_area, composerForeground, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(objects.message_input_area, composerMuted, LV_PART_TEXTAREA_PLACEHOLDER);
     lv_obj_set_style_border_color(objects.message_input_area, composerBorder, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(objects.message_input_area, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_color(objects.message_input_area, darkTheme ? colorMesh : lv_color_hex(0x2d6f46),
+    lv_obj_set_style_border_color(objects.message_input_area, darkTheme ? colorMesh : lv_color_hex(0x003b70),
                                   LV_PART_MAIN | LV_STATE_FOCUS_KEY);
     lv_obj_set_style_border_width(objects.message_input_area, 2, LV_PART_MAIN | LV_STATE_FOCUS_KEY);
     lv_obj_set_style_radius(objects.message_input_area, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
     if (messageSendButton) {
-        lv_obj_set_style_bg_color(messageSendButton, darkTheme ? lv_color_hex(0x205b37) : lv_color_hex(0x2d6f46),
+        lv_obj_set_style_bg_color(messageSendButton, darkTheme ? lv_color_hex(0x205b37) : lv_color_white(),
                                   LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_opa(messageSendButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_color(messageSendButton, darkTheme ? colorMesh : lv_color_hex(0x2d6f46),
+        lv_obj_set_style_border_color(messageSendButton, darkTheme ? colorMesh : lv_color_hex(0x003b70),
                                       LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_width(messageSendButton, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(messageSendButton, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_color(messageSendButton, darkTheme ? lv_color_white() : lv_color_hex(0x101820), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
-    lv_obj_set_style_bg_color(objects.keyboard_button_0, darkTheme ? lv_color_hex(0x183a28) : lv_color_hex(0xe4f3e8),
+    lv_obj_set_style_bg_color(objects.keyboard_button_0, darkTheme ? lv_color_hex(0x183a28) : lv_color_hex(0xffffff),
                               LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_image_recolor(objects.keyboard_button_0,
-                                      darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x2d6f46),
+                                      darkTheme ? lv_color_hex(0xaafbff) : lv_color_hex(0x003b70),
                                       LV_PART_MAIN | LV_STATE_DEFAULT);
-    const lv_color_t conversationTitle = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x203b2c);
-    const lv_color_t conversationSecondary = darkTheme ? lv_color_hex(0x93a99a) : lv_color_hex(0x668070);
+    const lv_color_t conversationTitle = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x101820);
+    const lv_color_t conversationSecondary = darkTheme ? lv_color_hex(0x93a99a) : lv_color_hex(0x334155);
     for (const auto &conversation : chats) {
         lv_obj_t *title = lv_obj_get_child(conversation.second, 0);
         if (title)
@@ -2182,6 +2205,14 @@ void TFTView_320x240::updateTheme(void)
         if (db.channel[i].role != meshtastic_Channel_Role_DISABLED)
             updateGroupChannel(i);
     }
+#ifdef ELECROW_ThinkNode_M9
+    // Refresh after local styles and labels, including the initially focused control.
+    lv_obj_tree_walk(objects.main_screen, M9FocusTheme::refresh, nullptr);
+    lv_obj_set_width(objects.battery_percentage_label, activePanel == objects.messages_panel ? 65 :
+                     (darkTheme ? LV_PCT(62) : LV_PCT(70)));
+    lv_obj_set_style_bg_image_recolor(objects.battery_image, darkTheme ? lv_color_white() : lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_image_recolor_opa(objects.battery_image, LV_OPA_COVER, LV_PART_MAIN);
+#endif
     lv_obj_report_style_change(nullptr);
 
     // Re-apply PRESSED-state override after every theme change. Themes::initStyles() resets
@@ -4727,10 +4758,10 @@ void TFTView_320x240::ui_event_map_url_textarea(lv_event_t *e)
                 if (!THIS->storage || !MapStorage::setUrlProvider(*THIS->storage, MapTileSettings::getPrefix(),
                                                                  defaultStyle.c_str(), url.c_str())) {
                     ILOG_ERROR("failed to save map URL template");
-                    lv_obj_set_style_border_color(objects.map_url_textarea, colorRed, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_color(objects.map_url_textarea, (Themes::get() == Themes::eLight ? lv_color_hex(0xb00020) : colorRed), LV_PART_MAIN | LV_STATE_DEFAULT);
                     return;
                 }
-                lv_obj_set_style_border_color(objects.map_url_textarea, colorBlueGreen, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_border_color(objects.map_url_textarea, (Themes::get() == Themes::eLight ? lv_color_hex(0x003b70) : colorBlueGreen), LV_PART_MAIN | LV_STATE_DEFAULT);
                 int entry = TileProvider::addTemplate("URL: " + defaultStyle, url);
                 TileProvider::selectTemplate(entry);
                 auto providers = TileProvider::providers();
@@ -4744,7 +4775,7 @@ void TFTView_320x240::ui_event_map_url_textarea(lv_event_t *e)
                 THIS->attribution(url);
             } else {
                 ILOG_WARN("wrong user url: %s", url.c_str());
-                lv_obj_set_style_border_color(objects.map_url_textarea, colorRed, LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_border_color(objects.map_url_textarea, (Themes::get() == Themes::eLight ? lv_color_hex(0xb00020) : colorRed), LV_PART_MAIN | LV_STATE_DEFAULT);
                 MapTileSettings::setSaveOK(false);
             }
         } else {
@@ -7219,7 +7250,7 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
             lv_obj_set_width(senderLabel, LV_PCT(100));
             lv_obj_set_height(senderLabel, LV_SIZE_CONTENT);
             lv_obj_set_style_text_font(senderLabel, &ui_font_montserrat_12, LV_PART_MAIN);
-            lv_obj_set_style_text_color(senderLabel, Themes::get() == Themes::eLight ? lv_color_black() : colorBlueGreen,
+            lv_obj_set_style_text_color(senderLabel, Themes::get() == Themes::eLight ? lv_color_black() : (Themes::get() == Themes::eLight ? lv_color_hex(0x003b70) : colorBlueGreen),
                                         LV_PART_MAIN);
             lv_obj_set_align(senderLabel, LV_ALIGN_TOP_LEFT);
         }
@@ -7246,7 +7277,7 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
     M9FocusTheme::attach(textLabel);
 #endif
     lv_obj_remove_flag(textLabel, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_add_event_cb(textLabel, scrollChatFocus, LV_EVENT_FOCUSED, nullptr);
+    lv_obj_add_event_cb(textLabel, scrollChatFocus, LV_EVENT_FOCUSED, &updatingChat);
     lv_label_set_text(textLabel, displayText.c_str());
     // Give the conversation a clear left/right rhythm while keeping the
     // existing theme, sender lookup, and Meshtastic delivery-state borders.
@@ -7258,17 +7289,17 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
     lv_obj_set_style_pad_bottom(textLabel, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(textLabel, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
     if (entry.sent) {
-        lv_obj_set_style_bg_color(textLabel, darkTheme ? lv_color_hex(0x234634) : lv_color_hex(0xc9f4d7),
+        lv_obj_set_style_bg_color(textLabel, darkTheme ? lv_color_hex(0x234634) : lv_color_hex(0xffffff),
                                   LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(textLabel, darkTheme ? lv_color_hex(0xecfff2) : lv_color_hex(0x173622),
+        lv_obj_set_style_text_color(textLabel, darkTheme ? lv_color_hex(0xecfff2) : lv_color_hex(0x101820),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_color(textLabel, colorMesh, LV_PART_MAIN | LV_STATE_DEFAULT);
     } else {
-        lv_obj_set_style_bg_color(textLabel, darkTheme ? lv_color_hex(0x182920) : lv_color_hex(0xe3f3e9),
+        lv_obj_set_style_bg_color(textLabel, darkTheme ? lv_color_hex(0x182920) : lv_color_hex(0xffffff),
                                   LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(textLabel, darkTheme ? lv_color_hex(0xd9eadf) : lv_color_hex(0x203b2c),
+        lv_obj_set_style_text_color(textLabel, darkTheme ? lv_color_hex(0xd9eadf) : lv_color_hex(0x101820),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_color(textLabel, darkTheme ? lv_color_hex(0x3c7251) : lv_color_hex(0x83b994),
+        lv_obj_set_style_border_color(textLabel, darkTheme ? lv_color_hex(0x3c7251) : lv_color_hex(0x003b70),
                                       LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 
@@ -7292,12 +7323,12 @@ lv_obj_t *TFTView_320x240::createChatBubble(lv_obj_t *container, const ChatHisto
                                       (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
         break;
     case LogMessage::eAcked:
-        lv_obj_set_style_border_color(textLabel, colorBlueGreen,
+        lv_obj_set_style_border_color(textLabel, (Themes::get() == Themes::eLight ? lv_color_hex(0x003b70) : colorBlueGreen),
                                       (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
         break;
     case LogMessage::eFailed:
     case LogMessage::eNoResponse:
-        lv_obj_set_style_border_color(textLabel, colorRed,
+        lv_obj_set_style_border_color(textLabel, (Themes::get() == Themes::eLight ? lv_color_hex(0xb00020) : colorRed),
                                       (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
         break;
     default:
@@ -7340,6 +7371,15 @@ void TFTView_320x240::ui_event_message_details(lv_event_t *e)
     }
     lv_obj_t *close = lv_msgbox_add_footer_button(dialog->box, _("Close"));
     dialog->closeButton = close;
+#ifdef ELECROW_ThinkNode_M9
+    if (Themes::get() == Themes::eLight) {
+        for (auto *part : {dialog->box, lv_msgbox_get_header(dialog->box),
+                           lv_msgbox_get_content(dialog->box), lv_msgbox_get_footer(dialog->box)}) {
+            add_style_settings_panel_style(part);
+        }
+        lv_obj_tree_walk(dialog->box, M9FocusTheme::refresh, nullptr);
+    }
+#endif
     lv_group_add_obj(THIS->defaultPanelGroup, close);
     lv_obj_add_event_cb(close, ui_event_message_close, LV_EVENT_CLICKED, dialog);
     lv_obj_add_event_cb(dialog->box, [](lv_event_t *event) {
@@ -7387,7 +7427,12 @@ void TFTView_320x240::ui_event_message_close(lv_event_t *e)
 
 void TFTView_320x240::appendChatEntry(lv_obj_t *container, ChatHistory::Entry entry)
 {
+#ifdef ELECROW_ThinkNode_M9
+    // Keep a viewport plus nearby messages in LVGL; retain the complete bounded model.
+    auto &history = chatHistories.try_emplace(container, 8, 3).first->second;
+#else
     auto &history = chatHistories[container];
+#endif
     const size_t previousFirst = history.first();
     const size_t previousSize = history.size();
     const bool visible = messagesRestored && container == activeMsgContainer && activePanel == objects.messages_panel &&
@@ -7694,6 +7739,110 @@ void TFTView_320x240::renderChat(lv_obj_t *container, bool follow, size_t previo
 #endif
 }
 
+bool TFTView_320x240::handleChatScrollKey(uint32_t key)
+{
+    const bool vertical = key == LV_KEY_UP || key == LV_KEY_DOWN;
+    const bool horizontal = key == LV_KEY_LEFT || key == LV_KEY_RIGHT;
+    if ((!vertical && !horizontal) || activePanel != objects.messages_panel ||
+        !activeMsgContainer || screenLocked || lv_scr_act() != objects.main_screen || updatingChat)
+        return false;
+    if (!inputdriver || !inputdriver->hasKeyboardDevice() ||
+        lv_indev_get_group(inputdriver->getKeyboard()) != defaultPanelGroup)
+        return false;
+    auto *focus = lv_group_get_focused(defaultPanelGroup);
+    if (!focus || !(isInside(focus, activeMsgContainer) || focus == objects.message_input_area || focus == messageSendButton))
+        return false;
+    if (horizontal) {
+        // The composer keeps normal cursor movement. In history, Left selects
+        // messages and Right switches Up/Down to fixed-distance scrolling.
+        if (!isInside(focus, activeMsgContainer))
+            return false;
+        chatStepScroll = key == LV_KEY_RIGHT;
+        if (chatModeIndicator)
+            lv_label_set_text_static(chatModeIndicator, chatStepScroll ? "\xF0\x9F\x93\x8F" : "\xE2\x9C\x89");
+        if (!chatStepScroll && lv_obj_get_child_count(activeMsgContainer)) {
+            // Select the bubble at the viewport center, even after scrolling far
+            // away from the previously focused message. Keep the reading position.
+            const int32_t center = lv_obj_get_scroll_y(activeMsgContainer) + lv_obj_get_height(activeMsgContainer) / 2;
+            lv_obj_t *nearest = nullptr;
+            int32_t distance = INT32_MAX;
+            for (uint32_t i = 0; i < lv_obj_get_child_count(activeMsgContainer); ++i) {
+                auto *row = lv_obj_get_child(activeMsgContainer, i);
+                const int32_t top = lv_obj_get_y(row);
+                const int32_t bottom = top + lv_obj_get_height(row);
+                const int32_t delta = center < top ? top - center : center > bottom ? center - bottom : 0;
+                if (delta < distance) {
+                    nearest = row;
+                    distance = delta;
+                }
+            }
+            if (nearest && lv_obj_get_child_count(nearest)) {
+                updatingChat = true;
+                lv_group_focus_obj(lv_obj_get_child(nearest, -1));
+                updatingChat = false;
+            }
+        }
+        return true;
+    }
+    if (!isInside(focus, activeMsgContainer)) {
+        if (key != LV_KEY_UP || !lv_obj_get_child_count(activeMsgContainer))
+            return false;
+        updatingChat = true;
+        lv_group_focus_obj(lv_obj_get_child(lv_obj_get_child(activeMsgContainer, -1), -1));
+        updatingChat = false;
+        // First Up enters the history at the latest message in selection mode.
+        if (!chatStepScroll)
+            return true;
+    }
+    if (!chatStepScroll) {
+        auto *selected = lv_group_get_focused(defaultPanelGroup);
+        auto *row = selected ? lv_obj_get_parent(selected) : nullptr;
+        if (!row || lv_obj_get_parent(row) != activeMsgContainer)
+            return false;
+        auto history = chatHistories.find(activeMsgContainer);
+        int32_t index = lv_obj_get_index(row);
+        const bool older = key == LV_KEY_UP;
+        if (history != chatHistories.end() &&
+            ((older && index == 0 && history->second.first()) ||
+             (!older && index == static_cast<int32_t>(lv_obj_get_child_count(activeMsgContainer)) - 1 &&
+              !history->second.atLatest()))) {
+            shiftChat(activeMsgContainer, older);
+            selected = lv_group_get_focused(defaultPanelGroup);
+            row = selected ? lv_obj_get_parent(selected) : nullptr;
+            if (!row || lv_obj_get_parent(row) != activeMsgContainer)
+                return true;
+            index = lv_obj_get_index(row);
+        }
+        const int32_t next = index + (older ? -1 : 1);
+        if (next >= 0 && next < static_cast<int32_t>(lv_obj_get_child_count(activeMsgContainer)))
+            lv_group_focus_obj(lv_obj_get_child(lv_obj_get_child(activeMsgContainer, next), -1));
+        else if (!older)
+            lv_group_focus_obj(objects.message_input_area);
+        return true;
+    }
+    // Read even a bubble taller than the display without jumping focus to its ends.
+    lv_obj_scroll_by_bounded(activeMsgContainer, 0, key == LV_KEY_UP ? 48 : -48, LV_ANIM_OFF);
+    const auto found = chatHistories.find(activeMsgContainer);
+    if (found != chatHistories.end()) {
+        auto &history = found->second;
+        if (key == LV_KEY_UP && history.first() && lv_obj_get_scroll_top(activeMsgContainer) <= 56)
+            shiftChat(activeMsgContainer, true);
+        else if (key == LV_KEY_DOWN && !history.atLatest() && lv_obj_get_scroll_bottom(activeMsgContainer) <= 56)
+            shiftChat(activeMsgContainer, false);
+        // Paging may have removed the previously selected bubble. Keep keyboard
+        // focus in history so Left can immediately return to message selection.
+        if (!isInside(lv_group_get_focused(defaultPanelGroup), activeMsgContainer) &&
+            lv_obj_get_child_count(activeMsgContainer)) {
+            updatingChat = true;
+            lv_group_focus_obj(lv_obj_get_child(lv_obj_get_child(activeMsgContainer, -1), -1));
+            updatingChat = false;
+        }
+        history.scrollY = history.atLatest() && lv_obj_get_scroll_bottom(activeMsgContainer) <= 20
+                              ? INT32_MAX : lv_obj_get_scroll_y(activeMsgContainer);
+    }
+    return true;
+}
+
 void TFTView_320x240::shiftChat(lv_obj_t *container, bool older)
 {
     auto found = chatHistories.find(container);
@@ -7738,11 +7887,12 @@ void TFTView_320x240::ui_event_chat_history(lv_event_t *event)
         return;
     if (code == LV_EVENT_SCROLL_END && target == container) {
         const auto &history = THIS->chatHistories.at(container);
-        if (history.first() && lv_obj_get_scroll_top(container) <= 0)
+        if (history.first() && lv_obj_get_scroll_top(container) <= 56)
             THIS->shiftChat(container, true);
-        else if (!history.atLatest() && lv_obj_get_scroll_bottom(container) <= 0)
+        else if (!history.atLatest() && lv_obj_get_scroll_bottom(container) <= 56)
             THIS->shiftChat(container, false);
-    } else if (code == LV_EVENT_FOCUSED && lv_obj_get_parent(lv_obj_get_parent(target)) == container) {
+    } else if (code == LV_EVENT_FOCUSED && !THIS->chatStepScroll &&
+               lv_obj_get_parent(lv_obj_get_parent(target)) == container) {
         const int32_t index = lv_obj_get_index(lv_obj_get_parent(target));
         if (index == 0 || index == lv_obj_get_child_count(container) - 1) {
             lv_async_call(
@@ -7990,9 +8140,9 @@ void TFTView_320x240::updateMetrics(uint32_t nodeNum, const meshtastic_DeviceMet
             alert = true;
         }
         if (!buf[0] && charging)
-            lv_snprintf(buf, sizeof(buf), "%s", _("Charge"));
+            lv_snprintf(buf, sizeof(buf), "%s", Themes::get() == Themes::eLight ? _("Charging") : _("Charge"));
         else if (!buf[0] && batteryStatus == BatteryLevel::Plugged)
-            lv_snprintf(buf, sizeof(buf), "%s", _("Charge"));
+            lv_snprintf(buf, sizeof(buf), "%s", Themes::get() == Themes::eLight ? _("Charging") : _("Charge"));
         else if (!buf[0])
             lv_snprintf(buf, sizeof(buf), "%s", _("--"));
         Themes::recolorTopLabel(objects.battery_percentage_label, alert);
@@ -8624,7 +8774,7 @@ void TFTView_320x240::updateChatStatus(uint32_t channelOrNode, uint32_t id, LogM
                 lv_label_set_text(textLabel, displayText.c_str());
             }
             lv_obj_set_style_border_color(textLabel,
-                                          status == LogMessage::eFailed || status == LogMessage::eNoResponse ? colorRed
+                                          status == LogMessage::eFailed || status == LogMessage::eNoResponse ? (Themes::get() == Themes::eLight ? lv_color_hex(0xb00020) : colorRed)
                                           : status == LogMessage::eAcked                                     ? colorBlueGreen
                                                                                                              : colorYellow,
                                           (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
@@ -9759,9 +9909,9 @@ void TFTView_320x240::addChat(uint32_t from, uint32_t to, uint8_t ch)
     add_style_home_button_style(chatBtn);
     lv_obj_set_style_align(chatBtn, LV_ALIGN_TOP_MID, (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
     const bool darkTheme = Themes::get() == Themes::eDark;
-    const lv_color_t cardText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x203b2c);
-    const lv_color_t secondaryText = darkTheme ? lv_color_hex(0x93a99a) : lv_color_hex(0x668070);
-    lv_obj_set_style_border_color(chatBtn, darkTheme ? lv_color_hex(0x526b5b) : lv_color_hex(0xa2b3a8),
+    const lv_color_t cardText = darkTheme ? lv_color_hex(0xe7f3ea) : lv_color_hex(0x101820);
+    const lv_color_t secondaryText = darkTheme ? lv_color_hex(0x93a99a) : lv_color_hex(0x334155);
+    lv_obj_set_style_border_color(chatBtn, darkTheme ? lv_color_hex(0x526b5b) : lv_color_hex(0x003b70),
                                   (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(chatBtn, 1, (lv_style_selector_t)LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DEFAULT);
     // The compact conversation list is frequently invalidated as unread counts
@@ -9981,6 +10131,8 @@ void TFTView_320x240::hideMessagePopup(void)
  */
 void TFTView_320x240::showMessages(uint8_t ch)
 {
+    chatStepScroll = false;
+    if (chatModeIndicator) lv_label_set_text_static(chatModeIndicator, "\xE2\x9C\x89");
     if (!messagesRestored) {
         // display message restoration progress banner
         lv_obj_clear_flag(objects.msg_popup_panel, LV_OBJ_FLAG_HIDDEN);
@@ -10015,6 +10167,8 @@ void TFTView_320x240::showMessages(uint8_t ch)
  */
 void TFTView_320x240::showMessages(uint32_t nodeNum)
 {
+    chatStepScroll = false;
+    if (chatModeIndicator) lv_label_set_text_static(chatModeIndicator, "\xE2\x9C\x89");
     hideChat(activeMsgContainer);
     lv_obj_add_flag(activeMsgContainer, LV_OBJ_FLAG_HIDDEN);
     activeMsgContainer = messages[nodeNum];

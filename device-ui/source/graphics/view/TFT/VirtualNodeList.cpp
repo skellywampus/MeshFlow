@@ -1,4 +1,5 @@
 #include "graphics/view/TFT/VirtualNodeList.h"
+#include "graphics/view/TFT/Themes.h"
 #ifdef ELECROW_ThinkNode_M9
 #include "graphics/common/M9NodeActions.h"
 #include "graphics/view/TFT/M9FocusTheme.h"
@@ -186,6 +187,11 @@ void setRoleImage(const NodeRecord &record, lv_obj_t *img)
         }
     }
     NodeListRowPresentation::applyNodeImage(img, record.id, source, record.unmessagable, true);
+    if (Themes::get() == Themes::eLight) {
+        lv_obj_set_style_bg_color(img, lv_color_white(), LV_PART_MAIN);
+        lv_obj_set_style_image_recolor(img, lv_color_hex(record.unmessagable ? 0xb00020 : 0x101820), LV_PART_MAIN);
+        lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, LV_PART_MAIN);
+    }
 }
 } // namespace
 
@@ -303,7 +309,7 @@ void VirtualNodeList::createRowPool()
         lv_obj_set_style_text_font(row.lblShort, &ui_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         row.lblBat = lv_label_create(row.panel);
-        lv_obj_set_pos(row.lblBat, 8, 17);
+        lv_obj_set_pos(row.lblBat, -4, 17);
         lv_obj_set_size(row.lblBat, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         lv_label_set_long_mode(row.lblBat, LV_LABEL_LONG_CLIP);
         lv_obj_remove_flag(row.lblBat, LV_OBJ_FLAG_SCROLLABLE);
@@ -311,7 +317,7 @@ void VirtualNodeList::createRowPool()
         lv_obj_set_style_text_align(row.lblBat, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         row.lblLh = lv_label_create(row.panel);
-        lv_obj_set_pos(row.lblLh, 8, 33);
+        lv_obj_set_pos(row.lblLh, -4, 33);
         lv_obj_set_size(row.lblLh, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         lv_label_set_long_mode(row.lblLh, LV_LABEL_LONG_CLIP);
         lv_obj_remove_flag(row.lblLh, LV_OBJ_FLAG_SCROLLABLE);
@@ -321,7 +327,7 @@ void VirtualNodeList::createRowPool()
         row.lblSig = lv_label_create(row.panel);
         lv_obj_set_width(row.lblSig, LV_SIZE_CONTENT);
         lv_obj_set_height(row.lblSig, LV_SIZE_CONTENT);
-        lv_obj_set_pos(row.lblSig, 8, 1);
+        lv_obj_set_pos(row.lblSig, -4, 1);
         lv_obj_remove_flag(row.lblSig, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_align(row.lblSig, LV_ALIGN_TOP_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_align(row.lblSig, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -332,7 +338,7 @@ void VirtualNodeList::createRowPool()
         lv_label_set_long_mode(row.lblPos1, LV_LABEL_LONG_CLIP);
         lv_obj_remove_flag(row.lblPos1, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_align(row.lblPos1, LV_ALIGN_TOP_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(row.lblPos1, lv_color_hex(0x05f6cb), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_color(row.lblPos1, lv_color_hex(Themes::get() == Themes::eLight ? 0x334155 : 0x05f6cb), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_add_event_cb(row.lblPos1, rowPositionCallback, LV_EVENT_CLICKED, this);
         lv_obj_add_flag(row.lblPos1, LV_OBJ_FLAG_HIDDEN);
 
@@ -999,7 +1005,7 @@ void VirtualNodeList::applyHighlight(ReusableRow &row, const NodeRecord &record)
     lv_obj_set_style_border_width(row.panel, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
     bool highlighted = false;
     if (renderContext.highlightActiveChat && record.hasActiveChat) {
-        lv_obj_set_style_border_color(row.panel, highlightOrange, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_border_color(row.panel, Themes::get() == Themes::eLight ? lv_color_hex(0x003b70) : highlightOrange, LV_PART_MAIN | LV_STATE_DEFAULT);
         highlighted = true;
     }
     if (renderContext.highlightPosition && record.position.hasCoordinates()) {

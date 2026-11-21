@@ -131,6 +131,7 @@ class TFTView_320x240 : public MeshtasticView, private NodeListActionSink
     bool isScreenLocked(void) override;
     static TFTView_320x240 *currentInstance(void) { return gui; }
     void requestScreenLock(bool immediate = false);
+    bool handleChatScrollKey(uint32_t key);
     void requestScreenWake();
     void newMessage(uint32_t from, uint32_t to, uint8_t ch, const char *msg, uint32_t &msgtime, bool restore = true) override;
     void restoreMessage(const LogMessage &msg) override;
@@ -635,6 +636,8 @@ class TFTView_320x240 : public MeshtasticView, private NodeListActionSink
     ChatUnreadTracker chatUnreadTracker;
     ChatUnreadBadgePresentation::VisibilityState unreadVisibilityState;
     bool updatingChat = false;
+    bool chatStepScroll = false;
+    lv_obj_t *chatModeIndicator = nullptr;
     lv_obj_t *activeWidget = nullptr;
     lv_obj_t *activeTextInput = nullptr;
     lv_group_t *defaultPanelGroup = nullptr; // The default LVGL group for panel content widgets

@@ -155,3 +155,40 @@ TEST_CASE("global chat budget evicts the oldest entry across conversations")
     CHECK(histories.at(2).size() == 0);
     CHECK(histories.at(1).at(0).sequence == 30);
 }
+
+TEST_CASE("small viewport pages retain all messages and overlap in both directions")
+{
+    ChatHistory history(8, 3);
+    for (size_t i = 0; i < 300; ++i) {
+        ChatHistory::Entry entry;
+        entry.sequence = i + 1;
+        history.append(std::move(entry), true);
+    }
+    CHECK(history.size() == 300);
+    CHECK(history.first() == 292);
+    CHECK(history.last() == 300);
+    while (history.first()) {
+        const auto anchor = history.first();
+        REQUIRE(history.older());
+        CHECK(history.first() <= anchor);
+        CHECK(history.last() > anchor);
+        CHECK(history.last() - history.first() <= 8);
+    }
+    while (!history.atLatest()) {
+        const auto anchor = history.last() - 1;
+        REQUIRE(history.newer());
+        CHECK(history.first() <= anchor);
+        CHECK(history.last() > anchor);
+        CHECK(history.last() - history.first() <= 8);
+    }
+    CHECK(history.last() == 300);
+    history.scrollY = 48;
+    history.older();
+    const auto first = history.first();
+    history.append(ChatHistory::Entry{}, false);
+    CHECK(history.first() == first);
+    CHECK(history.scrollY == 48);
+    history.latest();
+    CHECK(history.last() == 301);
+    CHECK(history.last() - history.first() == 8);
+}
