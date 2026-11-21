@@ -1,6 +1,6 @@
-# MeshFlow v0.1.2 beta
+# MeshFlow v0.1.2
 
-This M9 beta adds a high-contrast light theme and improves conversation navigation. Light mode uses white backgrounds, dark text, and a black selection with a yellow border. The node list keeps text within its rows.
+This M9 release adds a high-contrast light theme and improves conversation navigation. Light mode uses white backgrounds, dark text, and a black selection with a yellow border. The node list keeps text within its rows.
 
 Chats open with the most recent messages and load older messages in smaller pages. In a conversation, Up from the composer enters message history. Press Left for message selection or Right for stepped scrolling; Up and Down then perform the selected action. An envelope or ruler beside the battery indicates the mode. Long-press Center on an eligible sent message for its actions, including Retry. Left and Right remain cursor keys while editing.
 
